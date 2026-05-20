@@ -6,7 +6,8 @@ export REMOTE_ARCHIVE_FILENAME="${REMOTE_ARCHIVE_FILENAME:-In_Line_proxy.tar.gz}
 export REMOTE_BINARY_FILENAME="${REMOTE_BINARY_FILENAME:-In_Line_proxy}"
 export OUTPUT_FILE="${OUTPUT_FILE:-inline_proxy.out}"
 export RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-30}"
-export FDO_SVI_SIZE="${FDO_SVI_SIZE:-16384}"
+export FDO_SVI_SIZE="${FDO_SVI_SIZE:-64000}"
+export FDO_MESSAGE_SIZE="${FDO_MESSAGE_SIZE:-64000}"
 export TUNE_FDO_LIMITS="${TUNE_FDO_LIMITS:-1}"
 export LOCAL_ARCHIVE_PATH="${LOCAL_ARCHIVE_PATH:-$HOME/Documents/${REMOTE_ARCHIVE_FILENAME}}"
 
@@ -25,11 +26,11 @@ if [[ "$TUNE_FDO_LIMITS" == "1" ]]; then
     --header 'Content-Type: text/plain' \
     --data-raw "$FDO_SVI_SIZE"
 
-  # This endpoint is capped at 1500 by server-side logic.
+  # Message size is clamped by MessageSizeApi validation.
   curl --digest -u "$API_AUTH" --request POST \
     "$AIO_URL/api/v1/owner/messagesize" \
     --header 'Content-Type: text/plain' \
-    --data-raw '1500'
+    --data-raw "$FDO_MESSAGE_SIZE"
 fi
 
 # Reset SVI to avoid stale instructions

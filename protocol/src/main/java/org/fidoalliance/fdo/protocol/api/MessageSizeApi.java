@@ -4,6 +4,7 @@
 package org.fidoalliance.fdo.protocol.api;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.fidoalliance.fdo.protocol.BufferUtils;
 import org.fidoalliance.fdo.protocol.LoggerService;
 import org.fidoalliance.fdo.protocol.entity.OnboardingConfig;
 
@@ -20,6 +21,8 @@ import org.fidoalliance.fdo.protocol.entity.OnboardingConfig;
 public class MessageSizeApi extends RestApi {
 
   private static final LoggerService logger = new LoggerService(MessageSizeApi.class);
+  private static final int DEFAULT_MESSAGE_SIZE = BufferUtils.getPacketMtuSize();
+  private static final int MAX_MESSAGE_SIZE = BufferUtils.getMaxBufferSize();
 
   @Override
   public void doGet() throws Exception {
@@ -57,18 +60,20 @@ public class MessageSizeApi extends RestApi {
     try {
       messageSize = Integer.valueOf(getStringBody());
     } catch (NumberFormatException e) {
-      logger.error("Invalid SVI Threshold size");
+      logger.error("Invalid message size");
       getResponse().setStatus(HttpServletResponse.SC_BAD_REQUEST);
       return;
     }
 
     // Performing input checks on the message size.
     if (messageSize < 0) {
-      logger.warn("Value below the threshold of 0 bytes. Defaulting to 1500 bytes.");
-      messageSize = 1500;
-    } else if (messageSize > 1500) {
-      logger.warn("Value above the threshold of 1500 bytes. Defaulting to 1500 bytes.");
-      messageSize = 1500;
+      logger.warn("Value below the threshold of 0 bytes. Defaulting to "
+          + DEFAULT_MESSAGE_SIZE + " bytes.");
+      messageSize = DEFAULT_MESSAGE_SIZE;
+    } else if (messageSize > MAX_MESSAGE_SIZE) {
+      logger.warn("Value above the threshold of " + MAX_MESSAGE_SIZE
+          + " bytes. Defaulting to " + MAX_MESSAGE_SIZE + " bytes.");
+      messageSize = MAX_MESSAGE_SIZE;
     }
 
     // Query database table ONBOARDING_CONFIG for id `1`.
