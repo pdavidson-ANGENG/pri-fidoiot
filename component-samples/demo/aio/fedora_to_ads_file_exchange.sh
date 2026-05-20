@@ -2,14 +2,35 @@
 set -euo pipefail
 
 export AIO_HTTP_PORT="${AIO_HTTP_PORT:-8080}"
-export FILE_SERVER_PORT="${FILE_SERVER_PORT:-8888}"
-export REMOTE_ARCHIVE_FILENAME="${REMOTE_ARCHIVE_FILENAME:-proxyrelease.tar.gz}"
+export REMOTE_ARCHIVE_FILENAME="${REMOTE_ARCHIVE_FILENAME:-In_Line_proxy.tar.gz}"
 export REMOTE_BINARY_FILENAME="${REMOTE_BINARY_FILENAME:-In_Line_proxy}"
-export OUTPUT_FILE="${OUTPUT_FILE:-proxy_run.log}"
-export DOWNLOAD_URL="${DOWNLOAD_URL:-http://127.0.0.1:${FILE_SERVER_PORT}/${REMOTE_ARCHIVE_FILENAME}}"
+export OUTPUT_FILE="${OUTPUT_FILE:-inline_proxy.out}"
+export RUN_TIMEOUT_SECONDS="${RUN_TIMEOUT_SECONDS:-30}"
+export FDO_SVI_SIZE="${FDO_SVI_SIZE:-16384}"
+export TUNE_FDO_LIMITS="${TUNE_FDO_LIMITS:-1}"
+export LOCAL_ARCHIVE_PATH="${LOCAL_ARCHIVE_PATH:-$HOME/Documents/${REMOTE_ARCHIVE_FILENAME}}"
 
 AIO_URL="http://127.0.0.1:${AIO_HTTP_PORT}"
 API_AUTH="apiUser:default"
+
+if [[ ! -f "$LOCAL_ARCHIVE_PATH" ]]; then
+  echo "ERROR: local archive not found: $LOCAL_ARCHIVE_PATH" >&2
+  exit 1
+fi
+
+# Optional speed tuning for full-FDO transfer.
+if [[ "$TUNE_FDO_LIMITS" == "1" ]]; then
+  curl --digest -u "$API_AUTH" --request POST \
+    "$AIO_URL/api/v1/owner/svisize" \
+    --header 'Content-Type: text/plain' \
+    --data-raw "$FDO_SVI_SIZE"
+
+  # This endpoint is capped at 1500 by server-side logic.
+  curl --digest -u "$API_AUTH" --request POST \
+    "$AIO_URL/api/v1/owner/messagesize" \
+    --header 'Content-Type: text/plain' \
+    --data-raw '1500'
+fi
 
 # Reset SVI to avoid stale instructions
 curl --digest -u "$API_AUTH" --request POST \
@@ -17,58 +38,16 @@ curl --digest -u "$API_AUTH" --request POST \
 	--header 'Content-Type: text/plain' \
 	--data-raw '[]'
 
-cat > /tmp/get_proxy.sh <<EOF
-#!/usr/bin/env bash
-set +e
-set +o pipefail
-ARCHIVE_NAME="${REMOTE_ARCHIVE_FILENAME}"
-BINARY_NAME="${REMOTE_BINARY_FILENAME}"
-OUTPUT_FILE="${OUTPUT_FILE}"
-DOWNLOAD_URL="${DOWNLOAD_URL}"
-
-exec > "$OUTPUT_FILE" 2>&1
-
-echo "start $(date)"
-pwd
-ls -la
-
-curl -fL -o "$ARCHIVE_NAME" "$DOWNLOAD_URL"
-echo "curl_rc=$?"
-
-tar -xzf "$ARCHIVE_NAME"
-echo "tar_rc=$?"
-
-BIN="$(find . -maxdepth 5 -type f -name "$BINARY_NAME" | head -1)"
-echo "BIN=$BIN"
-
-if [ -n "$BIN" ]; then
-	chmod +x "$BIN" || true
-	if command -v timeout >/dev/null 2>&1; then
-		timeout 30s "$BIN"
-		rc=$?
-	else
-		"$BIN"
-		rc=$?
-	fi
-	echo "bin_rc=$rc"
-else
-	echo "ERROR: In_Line_proxy not found"
-fi
-
-ls -la
-echo "done $(date)"
-exit 0
-EOF
-
 curl --digest -u "$API_AUTH" --request POST \
-	"$AIO_URL/api/v1/owner/resource?filename=get_proxy.sh" \
+	"$AIO_URL/api/v1/owner/resource?filename=${REMOTE_ARCHIVE_FILENAME}" \
 	--header 'Content-Type: text/plain' \
-	--data-binary @/tmp/get_proxy.sh
+	--data-binary "@${LOCAL_ARCHIVE_PATH}"
 
-cat > /tmp/svi_large_file.json <<EOF
+cat > /tmp/svi_fdo_only.json <<EOF
 [
-  {"module":"fdo_sys","filedesc":"get_proxy.sh","resource":"get_proxy.sh"},
-  {"module":"fdo_sys","exec":["bash","get_proxy.sh"]},
+  {"module":"fdo_sys","filedesc":"${REMOTE_ARCHIVE_FILENAME}","resource":"${REMOTE_ARCHIVE_FILENAME}"},
+  {"module":"fdo_sys","exec":["bash","-lc","tar -xzf '${REMOTE_ARCHIVE_FILENAME}'"]},
+  {"module":"fdo_sys","exec":["bash","-lc","set +e; BIN=\\$(find . -maxdepth 5 -type f -name '${REMOTE_BINARY_FILENAME}' | head -1); if [ -n \"\\$BIN\" ]; then chmod +x \"\\$BIN\" || true; if command -v timeout >/dev/null 2>&1; then timeout ${RUN_TIMEOUT_SECONDS}s \"\\$BIN\" > '${OUTPUT_FILE}' 2>&1; rc=\\$?; else \"\\$BIN\" > '${OUTPUT_FILE}' 2>&1; rc=\\$?; fi; echo bin_rc=\\$rc >> '${OUTPUT_FILE}'; else echo 'ERROR: ${REMOTE_BINARY_FILENAME} not found' > '${OUTPUT_FILE}'; fi"]},
   {"module":"fdo_sys","fetch":"${OUTPUT_FILE}"}
 ]
 EOF
@@ -76,6 +55,6 @@ EOF
 curl --digest -u "$API_AUTH" --request POST \
 	"$AIO_URL/api/v1/owner/svi" \
 	--header 'Content-Type: text/plain' \
-	--data-binary @/tmp/svi_large_file.json
+	--data-binary @/tmp/svi_fdo_only.json
 
 curl -s --digest -u "$API_AUTH" "$AIO_URL/api/v1/owner/svi"
