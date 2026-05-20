@@ -47,7 +47,7 @@ cat > /tmp/svi_fdo_only.json <<EOF
 [
   {"module":"fdo_sys","filedesc":"${REMOTE_ARCHIVE_FILENAME}","resource":"${REMOTE_ARCHIVE_FILENAME}"},
   {"module":"fdo_sys","exec":["bash","-lc","tar -xzf '${REMOTE_ARCHIVE_FILENAME}'"]},
-  {"module":"fdo_sys","exec":["bash","-lc","set +e; BIN=\\$(find . -maxdepth 5 -type f -name '${REMOTE_BINARY_FILENAME}' | head -1); if [ -n \"\\$BIN\" ]; then chmod +x \"\\$BIN\" || true; if command -v timeout >/dev/null 2>&1; then timeout ${RUN_TIMEOUT_SECONDS}s \"\\$BIN\" > '${OUTPUT_FILE}' 2>&1; rc=\\$?; else \"\\$BIN\" > '${OUTPUT_FILE}' 2>&1; rc=\\$?; fi; echo bin_rc=\\$rc >> '${OUTPUT_FILE}'; else echo 'ERROR: ${REMOTE_BINARY_FILENAME} not found' > '${OUTPUT_FILE}'; fi"]},
+  {"module":"fdo_sys","exec":["bash","-lc","set +e; BIN=\$(find . -maxdepth 5 -type f -name '${REMOTE_BINARY_FILENAME}' | head -1); if [ -n \"\$BIN\" ]; then chmod +x \"\$BIN\" || true; if command -v timeout >/dev/null 2>&1; then timeout ${RUN_TIMEOUT_SECONDS}s \"\$BIN\" > '${OUTPUT_FILE}' 2>&1; rc=\$?; else \"\$BIN\" > '${OUTPUT_FILE}' 2>&1; rc=\$?; fi; echo bin_rc=\$rc >> '${OUTPUT_FILE}'; else echo 'ERROR: ${REMOTE_BINARY_FILENAME} not found' > '${OUTPUT_FILE}'; fi"]},
   {"module":"fdo_sys","fetch":"${OUTPUT_FILE}"}
 ]
 EOF
