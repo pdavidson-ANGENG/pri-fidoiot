@@ -1,22 +1,5 @@
 #!/usr/bin/env bash
 
-export AIO_HTTP_PORT="${AIO_HTTP_PORT:-8080}"
-export REMOTE_ARCHIVE_FILENAME="${REMOTE_ARCHIVE_FILENAME:-dpn_data.tar.gz}"
-export RUNNER_SCRIPT_FILENAME="${RUNNER_SCRIPT_FILENAME:-untar_dpn_data.sh}"
-export FDO_SVI_SIZE="${FDO_SVI_SIZE:-7900}"
-export FDO_MESSAGE_SIZE="${FDO_MESSAGE_SIZE:-7900}"
-export TUNE_FDO_LIMITS="${TUNE_FDO_LIMITS:-1}"
-export LOCAL_ARCHIVE_PATH="${LOCAL_ARCHIVE_PATH:-$HOME/Documents/${REMOTE_ARCHIVE_FILENAME}}"
-
-export AIO_URL="http://127.0.0.1:${AIO_HTTP_PORT}"
-export API_AUTH="apiUser:default"
-
-if [[ "${BASH_SOURCE[0]}" != "$0" ]]; then
-  echo "Run this script directly: bash ${BASH_SOURCE[0]}" >&2
-  return 0
-fi
-
-
 # Optional speed tuning for full-FDO transfer.
 if [[ "$TUNE_FDO_LIMITS" == "1" ]]; then
   curl --digest -u "$API_AUTH" --request POST \

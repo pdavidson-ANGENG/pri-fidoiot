@@ -37,10 +37,10 @@ tar -xzf "${REMOTE_ARCHIVE_FILENAME}"
 BIN="\$(find . -maxdepth 5 -type f -name "${REMOTE_BINARY_FILENAME}" | head -1)"
 if [ -n "$BIN" ]; then
   chmod +x "$BIN" || true
-  "$BIN" > "${OUTPUT_FILE}" 2>&1
-  echo "bin_rc=\$?" >> "${OUTPUT_FILE}"
+  "$BIN"
+  echo "bin_rc=\$?"
 else
-  echo "ERROR: ${REMOTE_BINARY_FILENAME} not found" > "${OUTPUT_FILE}"
+  echo "ERROR: ${REMOTE_BINARY_FILENAME} not found" >&2
 fi
 EOF
 
@@ -53,8 +53,7 @@ cat > /tmp/svi_short_exec.json <<EOF
 [
   {"module":"fdo_sys","filedesc":"${REMOTE_ARCHIVE_FILENAME}","resource":"${REMOTE_ARCHIVE_FILENAME}"},
   {"module":"fdo_sys","filedesc":"${RUNNER_SCRIPT_FILENAME}","resource":"${RUNNER_SCRIPT_FILENAME}"},
-  {"module":"fdo_sys","exec":["sh","${RUNNER_SCRIPT_FILENAME}"]},
-  {"module":"fdo_sys","fetch":"${OUTPUT_FILE}"}
+  {"module":"fdo_sys","exec":["sh","${RUNNER_SCRIPT_FILENAME}"]}
 ]
 EOF
 
