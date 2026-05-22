@@ -34,14 +34,7 @@ cat > "/tmp/${RUNNER_SCRIPT_FILENAME}" <<EOF
 #!/usr/bin/env sh
 set +e
 tar -xzf "${REMOTE_ARCHIVE_FILENAME}"
-BIN="\$(find . -maxdepth 5 -type f -name "${REMOTE_BINARY_FILENAME}" | head -1)"
-if [ -n "$BIN" ]; then
-  chmod +x "$BIN" || true
-  "$BIN"
-  echo "bin_rc=\$?"
-else
-  echo "ERROR: ${REMOTE_BINARY_FILENAME} not found" >&2
-fi
+
 EOF
 
 curl --digest -u "$API_AUTH" --request POST \
